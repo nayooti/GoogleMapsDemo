@@ -16,6 +16,7 @@ struct Place {
 
 let berlin = Place(latitude: 52.520008, longitude: 13.404954, name: "Berlin")
 let munich = Place(latitude: 48.137154, longitude: 11.576124, name: "München")
+let potsdam = Place(latitude: 52.398, longitude: 13.052, name: "Potsdam")
 
 public class MapController: UIViewController {
 
@@ -62,12 +63,20 @@ public class MapController: UIViewController {
         munichMarker.title = munich.name
         munichMarker.snippet = "Hauptstadt Bayern"
         munichMarker.map = mapView
+
+        let potsdamMarker = GMSMarker(position: potsdam.coordinates)
+        potsdamMarker.title = potsdam.name
+        potsdamMarker.snippet = "Potsdam"
+        potsdamMarker.map = mapView
     }
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // Draw route from Berlin to Munich
-        mapView.drawLine(from: berlin, to: munich)
+        // crashes app
+        // mapView.drawLine(from: berlin, to: munich)
+
+        // does not crash app
+        mapView.drawLine(from: berlin, to: potsdam)
     }
 }
 
@@ -76,19 +85,22 @@ extension GMSMapView {
     enum NavigationType: String {
         case walk = "walking"
         case bike = "bicycling"
-        case car = "driving"  // Korrigiert von "car" zu "driving" für Google Maps API
+        case car = "driving"
     }
 
     func drawLine(from: Place, to: Place) {
         let startBounds = GMSCoordinateBounds(coordinate: from.coordinates, coordinate: to.coordinates)
-        let cameraUpdate = GMSCameraUpdate.fit(startBounds, withPadding: 50)
+        let cameraUpdate = GMSCameraUpdate.fit(startBounds, withPadding: 100)
         animate(with: cameraUpdate)
 
         fetchPolylineWithOrigin(
             start: CLLocation(latitude: from.coordinates.latitude, longitude: from.coordinates.longitude),
             dest: CLLocation(latitude: to.coordinates.latitude, longitude: to.coordinates.longitude),
-            navigationType: .car
+            navigationType: .walk
         ) { [weak self] polyline in
+
+            guard let self = self else { return }
+
             let styles = [
                 GMSStrokeStyle.solidColor(.systemBlue),
                 GMSStrokeStyle.solidColor(.clear)
@@ -98,6 +110,7 @@ extension GMSMapView {
             let lengths = [3, 2]
 
             polyline.spans = GMSStyleSpans(polyline.path!, styles, lengths as [NSNumber], GMSLengthKind.rhumb)
+            // here the crash is happening
             polyline.map = self
         }
     }
@@ -127,25 +140,48 @@ extension GMSMapView {
 
         guard let directionsUrl = URL(string: directionsUrlString) else { return }
 
-        let dataTask = URLSession.shared.dataTask(with: directionsUrl) { data, response, error in
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: AnyObject],
-                  let routesArray = json["routes"] as? [AnyObject],
-                  !routesArray.isEmpty,
-                  let routeDict = routesArray[0] as? [String: AnyObject],
-                  let routeOverviewPolyline = routeDict["overview_polyline"] as? [String: AnyObject],
-                  let points = routeOverviewPolyline["points"] as? String,
-                  let path = GMSPath(fromEncodedPath: points) else {
-                print("Failed to process directions data")
+        let dataTask = URLSession.shared.dataTask(with: directionsUrl, completionHandler: {
+            data, response, error in
+
+            guard let data = data else {
+                print("data was nil")
                 return
             }
-
-            DispatchQueue.main.async {
-                let polyline = GMSPolyline(path: path)
-                completionHandler(polyline)
+            guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String:AnyObject] else {
+                print("json parsing failed")
+                return
             }
-        }
+            let defJSON = json
 
+            guard let routesArray = defJSON["routes"] as? [AnyObject] else {
+                print("could not extract routes array")
+                return
+            }
+            if routesArray.count != 0 {
+                guard let routeDict = routesArray[0] as? [String:AnyObject] else {
+                    print("could not extract routeDict")
+                    return
+                }
+                guard let routeOverviewPolyline = routeDict["overview_polyline"] as? [String:AnyObject] else {
+                    print("could not extract overview_polyline")
+                    return
+                }
+                guard let points = routeOverviewPolyline["points"] as? String else {
+                    print("could not extract points")
+                    return
+                }
+
+                guard let path = GMSPath(fromEncodedPath: points) else {
+                    print("path creation failed")
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    let polyline = GMSPolyline(path: path)
+                    completionHandler(polyline)
+                }
+            }
+        })
         dataTask.resume()
     }
 }
