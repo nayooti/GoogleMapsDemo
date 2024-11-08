@@ -1,20 +1,17 @@
 # GoogleMapsDemo
-Demo of using GoogleMaps-SDK in framework
-Bonus: App does not require GoogleMaps
 
-## Project Structure
-- Core uses GoogleMaps via SPM
-- App uses Core 
+This project demonstrates a crash when assiging a map to GMSPolyline due to memory issues.
+The crash only happens after the polyline covers a certain distance. 
 
-## Issues:
-Without further adjustments Core could not be run. 
-```
-Command SwiftVerifyEmittedModuleInterface failed with a nonzero exit code
-```
-## Adjustments:
-Build Settings vom Core Target
-- "Build Libraries for Distribution" -> NO
-- "Dead Code Stripping" -> NO
-- "Other Linker Flags" -> add "-ObjC" 
-- "Enable Modules (C and Objective-C)" -> YES
-With these Adjustments App and Core can be run.
+#### How to reproduce:
+1. in MapController set your API key
+2. run the app on a real device (running the app on a simulator can crash your machine)
+  - the app tries to draw a polyline from Berlin to Munich and crashes due to memory isues
+3. in MapController+viewDidAppear change the polyline from Berlin to Potsdam (short distance)
+  - the does no longer crash
+
+    
+
+    
+  
+
