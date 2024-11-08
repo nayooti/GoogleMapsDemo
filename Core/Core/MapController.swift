@@ -73,10 +73,10 @@ public class MapController: UIViewController {
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         // crashes app
-        // mapView.drawLine(from: berlin, to: munich)
+        mapView.drawLine(from: berlin, to: munich, navigationType: .car)
 
         // does not crash app
-        mapView.drawLine(from: berlin, to: potsdam)
+        // mapView.drawLine(from: berlin, to: potsdam)
     }
 }
 
@@ -88,7 +88,7 @@ extension GMSMapView {
         case car = "driving"
     }
 
-    func drawLine(from: Place, to: Place) {
+    func drawLine(from: Place, to: Place, navigationType: NavigationType) {
         let startBounds = GMSCoordinateBounds(coordinate: from.coordinates, coordinate: to.coordinates)
         let cameraUpdate = GMSCameraUpdate.fit(startBounds, withPadding: 100)
         animate(with: cameraUpdate)
@@ -96,7 +96,7 @@ extension GMSMapView {
         fetchPolylineWithOrigin(
             start: CLLocation(latitude: from.coordinates.latitude, longitude: from.coordinates.longitude),
             dest: CLLocation(latitude: to.coordinates.latitude, longitude: to.coordinates.longitude),
-            navigationType: .walk
+            navigationType: navigationType
         ) { [weak self] polyline in
 
             guard let self = self else { return }
