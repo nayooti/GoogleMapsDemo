@@ -76,7 +76,7 @@ public class MapController: UIViewController {
         mapView.drawLine(from: berlin, to: munich, navigationType: .car)
 
         // does not crash app
-        // mapView.drawLine(from: berlin, to: potsdam)
+        // mapView.drawLine(from: berlin, to: potsdam, navigationType: .car)
     }
 }
 
